@@ -305,9 +305,150 @@ document.addEventListener("DOMContentLoaded", function() {
   // Es el momento seguro para buscar elementos del DOM
  
   crearFiltros();          // crea los botones de categoría
-  mostrarProductos(productos); // muestra todos los productos
+  cargarProductosExternos(); // muestra todos los productos
   iniciarFormulario();     // activa el formulario de contacto
  
   console.log("TechStore listo ✅");
 });
  
+// ─────────────────────────────────────────────────────────
+// PROMESAS Y ASYNC/AWAIT
+// ─────────────────────────────────────────────────────────
+ 
+// FORMA ANTIGUA — con .then() y .catch()
+// Funciona, pero se vuelve difícil de leer cuando hay muchos pasos
+function cargarConThen() {
+  fetch("https://jsonplaceholder.typicode.com/posts/1")
+    .then(function(respuesta) {
+      // Se ejecuta cuando llega la respuesta
+      return respuesta.json(); // convierte el texto a objeto JS
+    })
+    .then(function(datos) {
+      // Se ejecuta cuando el JSON está listo
+      console.log("Con .then():", datos.title);
+    })
+    .catch(function(error) {
+      // Se ejecuta si CUALQUIER paso anterior falló
+      console.error("Error con .then():", error);
+    });
+}
+ 
+ 
+// FORMA MODERNA — con async/await
+// Hace EXACTAMENTE lo mismo pero se lee de arriba a abajo como código normal
+async function cargarConAwait() {
+  // "async" marca la función como asíncrona
+  // Una función async siempre devuelve una Promesa
+ 
+  try {
+    // "try": intenta ejecutar este bloque de código
+ 
+    let respuesta = await fetch("https://jsonplaceholder.typicode.com/posts/1");
+    // "await": pausa esta función hasta que fetch() termine
+    // Mientras espera, el resto del navegador sigue funcionando
+ 
+    let datos = await respuesta.json();
+    // Otro await: espera a que el JSON se convierta a objeto
+ 
+    console.log("Con async/await:", datos.title);
+    // Aquí ya tenemos los datos disponibles
+ 
+  } catch (error) {
+    // "catch": si ALGO falló en el try, cae aquí
+    // Captura: sin internet, URL inválida, servidor caído, etc.
+    console.error("Error con async/await:", error.message);
+  }
+}
+ 
+// Las dos funciones hacen lo mismo — usa async/await de ahora en adelante
+cargarConAwait();
+ 
+ 
+// ─────────────────────────────────────────────────────────
+// LOS TRES TIPOS DE ERROR QUE DEBES MANEJAR
+// ─────────────────────────────────────────────────────────
+ 
+async function cargarProductosExternos() {
+  // Esta función carga datos desde la API pública JSONPlaceholder
+  // Usamos /users porque tiene datos con nombre y email, útil para practicar
+ 
+  const contenedor = document.getElementById("contenedor-productos");
+  if (!contenedor) return;
+ 
+  // Mostrar indicador de carga mientras esperamos la respuesta
+  contenedor.innerHTML = `
+    <div class="col-12 text-center py-4">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 text-muted">Cargando desde la API...</p>
+    </div>
+  `;
+  // spinner-border: animación de carga de Bootstrap
+ 
+  try {
+ 
+    // ── Error tipo 1: sin internet o URL inválida ──────────
+    // Si no hay conexión, fetch() lanza un error aquí mismo
+    // El catch() lo captura automáticamente
+    let respuesta = await fetch("https://jsonplaceholder.typicode.com/users");
+ 
+    // ── Error tipo 2: el servidor respondió con error ──────
+    // fetch() NO lanza error aunque el servidor responda 404 o 500
+    // Debemos verificar manualmente con respuesta.ok
+    if (!respuesta.ok) {
+      // respuesta.ok = true solo si el código HTTP es 200-299
+      throw new Error("Error del servidor: " + respuesta.status);
+      // throw: lanza un error manualmente → va al catch()
+    }
+ 
+    // ── Error tipo 3: JSON inválido ────────────────────────
+    // Si el servidor envió texto malformado, .json() falla aquí
+    let usuarios = await respuesta.json();
+ 
+    // Si llegamos aquí, todo salió bien
+    // Ahora construimos las tarjetas con datos reales
+    let html = "";
+    usuarios.slice(0, 6).forEach(function(usuario) {
+      // .slice(0, 6): toma solo los primeros 6 usuarios
+      html += `
+        <div class="col-md-4">
+          <div class="card h-100">
+            <div class="card-img-top">👤</div>
+            <div class="card-body">
+              <span class="badge-categoria">usuario</span>
+              <h5 class="card-title mt-2">${usuario.name}</h5>
+              <p class="text-muted small">${usuario.email}</p>
+              <p class="precio small text-success">📍 ${usuario.address.city}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+ 
+    contenedor.innerHTML = html;
+    console.log("Datos cargados desde la API ✅");
+ 
+  } catch (error) {
+    // Cualquiera de los 3 tipos de error llega aquí
+    console.error("Error al cargar:", error.message);
+ 
+    // Mostramos el error de forma amigable al usuario
+    contenedor.innerHTML = `
+      <div class="col-12">
+        <div class="alert alert-danger">
+          <strong>No se pudieron cargar los productos.</strong><br>
+          Verifica tu conexión a internet e intenta de nuevo.
+        </div>
+        <button onclick="cargarProductosExternos()" class="btn btn-outline-primary">
+          Reintentar
+        </button>
+      </div>
+    `;
+    // REGLA: nunca muestres el error técnico al usuario
+    // El console.error() es para los developers (F12)
+    // El alert es para el usuario común
+  }
+}
+ 
+// Para probar: llama esta función en lugar de mostrarProductos()
+// Descomenta la línea de abajo y comenta la de mostrarProductos() en DOMContentLoaded
+// cargarProductosExternos();
