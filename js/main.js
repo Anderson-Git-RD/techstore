@@ -452,3 +452,192 @@ async function cargarProductosExternos() {
 // Para probar: llama esta función en lugar de mostrarProductos()
 // Descomenta la línea de abajo y comenta la de mostrarProductos() en DOMContentLoaded
 // cargarProductosExternos();
+
+// ─────────────────────────────────────────────────────────
+// HTTP EN CÓDIGO — los 4 verbos con fetch()
+// Usamos JSONPlaceholder como servidor de práctica
+// Es una API pública que acepta todos los verbos
+// ─────────────────────────────────────────────────────────
+ 
+ 
+// ══ VERBO GET — pedir datos ══════════════════════════════
+// Úsalo cuando: quieres leer información sin modificar nada
+// Tiene: solo la URL. Sin body, sin Content-Type.
+ 
+async function httpGET() {
+  console.log("─── GET ───────────────────────────────");
+ 
+  try {
+    // fetch() sin segundo parámetro = GET por defecto
+    let respuesta = await fetch("https://jsonplaceholder.typicode.com/posts/1");
+ 
+   { console.log("Código de estado:", respuesta.status);
+    // Muestra: 200 (si todo bien)
+    }
+    console.log("respuesta.ok:", respuesta.ok);
+    // Muestra: true (porque 200 está en el rango 200-299)
+ 
+    if (!respuesta.ok) throw new Error("Código: " + respuesta.status);
+ 
+    let datos = await respuesta.json();
+    console.log("Datos recibidos:", datos.title);
+ 
+  } catch (error) {
+    console.error("GET falló:", error.message);
+  }
+}
+ 
+ 
+// ══ VERBO POST — crear algo nuevo ════════════════════════
+// Úsalo cuando: quieres guardar algo nuevo en el servidor
+// Tiene: method, headers con Content-Type, y body con los datos
+ 
+async function httpPOST() {
+  console.log("─── POST ──────────────────────────────");
+ 
+  // Los datos que quiero guardar en el servidor
+  const nuevoProducto = {
+    title: "iPhone 15 Pro",
+    body: "El mejor smartphone del año",
+    userId: 1,
+  };
+ 
+  try {
+    let respuesta = await fetch("https://jsonplaceholder.typicode.com/posts", {
+      // El segundo parámetro de fetch() es el objeto de configuración
+ 
+      method: "POST",
+      // ↑ Le dice al servidor qué verbo usar
+      // Sin esto, fetch() usa GET por defecto
+ 
+      headers: {
+        "Content-Type": "application/json",
+        // ↑ Le avisa al servidor que los datos son JSON
+        // Sin este header, el servidor no sabe cómo leer el body
+      },
+ 
+      body: JSON.stringify(nuevoProducto),
+      // ↑ Los datos a enviar, convertidos de objeto JS a texto JSON
+      // JSON.stringify({ a: 1 }) → '{"a":1}'
+      // El servidor recibe el texto y lo convierte de vuelta a objeto
+    });
+ 
+    console.log("Código de estado:", respuesta.status);
+    // Deberías ver: 201 (Created)
+ 
+    let creado = await respuesta.json();
+    console.log("El servidor creó el recurso con id:", creado.id);
+    // JSONPlaceholder devuelve el objeto con un id asignado
+ 
+  } catch (error) {
+    console.error("POST falló:", error.message);
+  }
+}
+ 
+ 
+// ══ VERBO PUT — reemplazar completamente ═════════════════
+// Úsalo cuando: quieres actualizar TODOS los campos de un recurso
+// El id va en la URL, los datos nuevos van en el body
+ 
+async function httpPUT() {
+  console.log("─── PUT ───────────────────────────────");
+ 
+  // El objeto COMPLETO con todos sus campos actualizados
+  const productoActualizado = {
+    id: 1,
+    title: "iPhone 15 Pro — EDICIÓN ACTUALIZADA",
+    body: "Descripción actualizada completa",
+    userId: 1,
+  };
+ 
+  try {
+    let respuesta = await fetch("https://jsonplaceholder.typicode.com/posts/1", {
+    // ↑ El /1 al final de la URL indica QUÉ recurso actualizar
+ 
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(productoActualizado),
+    });
+ 
+    console.log("Código de estado:", respuesta.status);
+    // Deberías ver: 200 (OK)
+ 
+    let resultado = await respuesta.json();
+    console.log("Recurso actualizado:", resultado.title);
+ 
+  } catch (error) {
+    console.error("PUT falló:", error.message);
+  }
+}
+ 
+ 
+// ══ VERBO DELETE — borrar ════════════════════════════════
+// Úsalo cuando: quieres eliminar un recurso del servidor
+// El id va en la URL — generalmente no hay body
+ 
+async function httpDELETE() {
+  console.log("─── DELETE ────────────────────────────");
+ 
+  try {
+    let respuesta = await fetch("https://jsonplaceholder.typicode.com/posts/1", {
+    // ↑ /1 al final: borrar el recurso con id 1
+ 
+      method: "DELETE",
+      // En DELETE: solo el método. Sin headers, sin body.
+    });
+ 
+    console.log("Código de estado:", respuesta.status);
+    // Deberías ver: 200 (JSONPlaceholder usa 200 en DELETE)
+    // En APIs reales: 204 No Content (borrado sin datos que devolver)
+ 
+    if (respuesta.ok) {
+      console.log("Recurso borrado exitosamente ✅");
+    }
+ 
+  } catch (error) {
+    console.error("DELETE falló:", error.message);
+  }
+}
+ 
+ 
+// ══ PRUEBA EL ERROR 404 — cuando el recurso no existe ════
+ 
+async function probarError404() {
+  console.log("─── Probando error 404 ────────────────");
+ 
+  try {
+    let respuesta = await fetch("https://jsonplaceholder.typicode.com/posts/1");
+    // El post con id 99999 no existe → servidor responde 404
+    
+    {
+    console.log("Código de estado:", respuesta.status);
+    // Verás: 404
+      }
+
+    console.log("respuesta.ok:", respuesta.ok);
+    // Verás: false  (porque 404 no está en el rango 200-299)
+ 
+    // ⚠️ PUNTO CRÍTICO: fetch() NO lanza error cuando el servidor
+    // responde 404 o 500. La petición "llegó y tuvo respuesta".
+    // Por eso SIEMPRE debes verificar respuesta.ok manualmente.
+ 
+    if (!respuesta.ok) {
+      throw new Error("No encontrado. Código: " + respuesta.status);
+    }
+ 
+  } catch (error) {
+    console.error("Error capturado:", error.message);
+    // Aquí sí llegamos porque lanzamos el error manualmente con throw
+  }
+}
+ 
+ 
+// ═══════════════════════════════════════════════════════
+// EJECUTAR TODAS LAS PRUEBAS
+// Abre F12 > Console y verás los resultados de cada verbo
+// ═══════════════════════════════════════════════════════
+httpGET();
+httpPOST();
+httpPUT();
+httpDELETE();
+probarError404();
